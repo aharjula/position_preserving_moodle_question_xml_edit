@@ -8,6 +8,8 @@ authors = ["Matti Harjula <matti.harjula@aalto.fi>"]
 homepage = "https://github.com/aharjula/position_preserving_moodle_question_xml_edit"
 repository = "https://github.com/aharjula/position_preserving_moodle_question_xml_edit"
 readme = "README.md"
+keywords = ["moodle", "question", "xml", "STACK"]
+categories = ["parsing"]
 
 [dependencies]
 assert_fs = "1.1.2"
