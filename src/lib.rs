@@ -445,6 +445,11 @@ impl QParser {
             if node.is_element() && node.tag_name().name() == "question" {
                 match node.attribute("type") {
                     Some(qtype) => {
+                        if qtype == "category" {
+                            // We ignore these.
+                            continue;
+                        }
+
                         let mut name: Option<ContentRef> = None;
                         for n in node.children() {
                             if n.is_element() && n.tag_name().name() == "name" {
@@ -573,7 +578,11 @@ impl QParser {
         for node in doc.descendants() {
             if node.is_element() && node.tag_name().name() == "question" {
                 match node.attribute("type") {
-                    Some(_qtype) => {
+                    Some(qtype) => {
+                        if qtype == "category" {
+                            // We ignore these.
+                            continue;
+                        }
                         if qn == qnum {
                             return self._get_elements(node, tagnames)
                         }
