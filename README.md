@@ -30,7 +30,7 @@ First start a project, and include this library, also urlencode as this task nee
 ```
 Then modify the `src/main.rs` file to contain this:
 ```
-use position_preserving_moodle_question_xml_edit::{QParser, Change}
+use position_preserving_moodle_question_xml_edit::{QParser, Question, ContentType, Change};
 
 fn main() {
     // Simple arguments.
