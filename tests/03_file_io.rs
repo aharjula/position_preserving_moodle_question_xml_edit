@@ -8,9 +8,9 @@ fn load_from_file() {
 	let data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
 <!-- question: 1  -->
-  <question type=\"some\">...</question>
+  <question type=\"some\"><name><text>...</text></name></question>
 <!-- question: 2  -->
-  <question type=\"stack\">...</question>
+  <question type=\"stack\"><name><text>...</text></name></question>
 </quiz>
 ".to_string();
 	let test_file = NamedTempFile::new("test.xml").unwrap();
@@ -29,15 +29,15 @@ fn save_to_file() {
 	let data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
 <!-- question: 1  -->
-  <question type=\"some\">...</question>
+  <question type=\"some\"><name><text>...</text></name></question>
 <!-- question: 2  -->
-  <question type=\"stack\">...</question>
+  <question type=\"stack\"><name><text>...</text></name></question>
 </quiz>
 ".to_string();
 	let target_data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
 <!-- question: 1  -->
-  <question type=\"some\">...</question>
+  <question type=\"some\"><name><text>...</text></name></question>
 <!-- question: 2  -->
   
 </quiz>
@@ -69,6 +69,7 @@ fn trying_to_save_a_broken_document() {
 	let data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
   <question type=\"some\">
+  	<name><text>...</text></name>
   	<trouble/>
   </question>
 </quiz>

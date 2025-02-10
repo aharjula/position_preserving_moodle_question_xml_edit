@@ -8,9 +8,9 @@ fn referencing_a_nonexistent_question() {
 	let data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
 <!-- question: 1  -->
-  <question type=\"some\">...</question>
+  <question type=\"some\"><name><text>Test</text></name></question>
 <!-- question: 2  -->
-  <question type=\"stack\">...</question>
+  <question type=\"stack\"><name><text>Test</text></name></question>
 </quiz>
 ".to_string();
 	let mut parser = QParser::from_string(data).expect("Valid input should not fail");
@@ -28,20 +28,21 @@ fn overlapping_updates_1_same_target() {
 	let data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
   <question type=\"some\">
-  	<name>Test question</name>
+  	<name><text>Test</text></name>
+  	<something>Some</something>
   </question>
 </quiz>
 ".to_string();
 	let mut parser = QParser::from_string(data).expect("Valid input should not fail");
-	let elements: Vec<ContentType> = parser.get_elements(0, vec!["name".to_string()]);
+	let elements: Vec<ContentType> = parser.get_elements(0, vec!["something".to_string()]);
 	assert_eq!(elements.len(), 1);
 
 	match &elements[0] {
 		ContentType::Element(tag_name, _whole_element_ref, contents_and_attributes) => {
-			assert_eq!(tag_name, &"name".to_string());
+			assert_eq!(tag_name, &"something".to_string());
 			assert_eq!(contents_and_attributes.len(), 1);
 			if let ContentType::ElementContent(content_ref) = &contents_and_attributes[0] {
-				assert_eq!(content_ref.content, "Test question".to_string());
+				assert_eq!(content_ref.content, "Some".to_string());
 
 				// The first change is fine to register.
 				let change = Change::new(content_ref.clone(), "Foo".to_string());
@@ -66,20 +67,21 @@ fn overlapping_updates_2_child_and_parent() {
 	let data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
   <question type=\"some\">
-  	<name>Test question</name>
+  	<name><text>Test</text></name>
+  	<something>Some</something>
   </question>
 </quiz>
 ".to_string();
 	let mut parser = QParser::from_string(data).expect("Valid input should not fail");
-	let elements: Vec<ContentType> = parser.get_elements(0, vec!["name".to_string()]);
+	let elements: Vec<ContentType> = parser.get_elements(0, vec!["something".to_string()]);
 	assert_eq!(elements.len(), 1);
 
 	match &elements[0] {
 		ContentType::Element(tag_name, whole_element_ref, contents_and_attributes) => {
-			assert_eq!(tag_name, &"name".to_string());
+			assert_eq!(tag_name, &"something".to_string());
 			assert_eq!(contents_and_attributes.len(), 1);
 			if let ContentType::ElementContent(content_ref) = &contents_and_attributes[0] {
-				assert_eq!(content_ref.content, "Test question".to_string());
+				assert_eq!(content_ref.content, "Some".to_string());
 
 				// The first change is fine to register.
 				let change = Change::new(content_ref.clone(), "Foo".to_string());
@@ -105,20 +107,21 @@ fn overlapping_updates_3_parent_and_child() {
 	let data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
   <question type=\"some\">
-  	<name>Test question</name>
+  	<name><text>Test</text></name>
+  	<something>Some</something>
   </question>
 </quiz>
 ".to_string();
 	let mut parser = QParser::from_string(data).expect("Valid input should not fail");
-	let elements: Vec<ContentType> = parser.get_elements(0, vec!["name".to_string()]);
+	let elements: Vec<ContentType> = parser.get_elements(0, vec!["something".to_string()]);
 	assert_eq!(elements.len(), 1);
 
 	match &elements[0] {
 		ContentType::Element(tag_name, whole_element_ref, contents_and_attributes) => {
-			assert_eq!(tag_name, &"name".to_string());
+			assert_eq!(tag_name, &"something".to_string());
 			assert_eq!(contents_and_attributes.len(), 1);
 			if let ContentType::ElementContent(content_ref) = &contents_and_attributes[0] {
-				assert_eq!(content_ref.content, "Test question".to_string());
+				assert_eq!(content_ref.content, "Some".to_string());
 
 				// The first change is fine to register.
 				let change = Change::new(whole_element_ref.clone(), "<nimi>Bar</nimi>".to_string());
@@ -143,20 +146,21 @@ fn using_old_references() {
 	let data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
   <question type=\"some\">
-  	<name>Test question</name>
+  	<name><text>Test question</text></name>
+  	<something>Some</something>
   </question>
 </quiz>
 ".to_string();
 	let mut parser = QParser::from_string(data).expect("Valid input should not fail");
-	let elements: Vec<ContentType> = parser.get_elements(0, vec!["name".to_string()]);
+	let elements: Vec<ContentType> = parser.get_elements(0, vec!["something".to_string()]);
 	assert_eq!(elements.len(), 1);
 
 	match &elements[0] {
 		ContentType::Element(tag_name, whole_element_ref, contents_and_attributes) => {
-			assert_eq!(tag_name, &"name".to_string());
+			assert_eq!(tag_name, &"something".to_string());
 			assert_eq!(contents_and_attributes.len(), 1);
 			if let ContentType::ElementContent(content_ref) = &contents_and_attributes[0] {
-				assert_eq!(content_ref.content, "Test question".to_string());
+				assert_eq!(content_ref.content, "Some".to_string());
 
 				// Lets change something.
 				let change = Change::new(whole_element_ref.clone(), "<nimi>Bar</nimi>".to_string());
@@ -184,6 +188,7 @@ fn trying_to_parse_a_broken_document() {
 	let data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
   <question type=\"some\">
+  	<name><text>Test</text></name>
   	<pair></missing>
   </question>
 </quiz>
@@ -215,6 +220,7 @@ fn continuing_after_breaking_a_document() {
 	let data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
   <question type=\"some\">
+  	<name><text>Test</text></name>
   	<trouble/>
   </question>
 </quiz>

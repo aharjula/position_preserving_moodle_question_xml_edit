@@ -17,7 +17,7 @@
 pub struct ContentRef {
     /// The textual content of whatever was requested.
     pub content: String,
-    /// The position, in UTF-8 characters, in the XML of that.
+    /// The position, in bytes, in the XML of that.
     start: usize,
     /// And the matching end
     end: usize,
@@ -236,7 +236,35 @@ pub enum ContentType {
     /// The tagname, content refrence to the format and as the first item in the list the contents of the text-element and the rest of the items are attachments as elements.
     MoodleTextElement(String, ContentRef, Vec<ContentType>)
 }
+impl ContentType {
+    /// If this is an element or attribute and the attribute requested 
+    /// is available return a ref to it.
+    pub fn get_attr(self, name: String) -> Option<ContentRef> {
+        match self {
+            ContentType::AttributeValue(aname, value) => {
+                if aname == name {
+                    Some(value)
+                } else {
+                    None
+                }
+            },
+            ContentType::Element(_, _, attributes_and_value) => {
+                for item in attributes_and_value {
+                    if let ContentType::AttributeValue(aname, value) = item {
+                        if aname == name {
+                            return Some(value);
+                        }       
+                    }
+                }
+                None
+            },
+            _ => {
+                None
+            }
+        }
+    }
 
+}
 
 
 /// Results from question identification.
@@ -246,6 +274,8 @@ pub struct Question {
     pub index: usize,
     /// The type of the question, from the `type` attribute of the `<question>`-element.
     pub qtype: String,
+    /// Name element contents.
+    pub name: ContentRef,
     /// Content reference ot the whole `<question>`-element. For when you want to copy or remove the whole question from the document.
     pub whole_element: ContentRef
 }
@@ -415,8 +445,22 @@ impl QParser {
             if node.is_element() && node.tag_name().name() == "question" {
                 match node.attribute("type") {
                     Some(qtype) => {
-                        let wholetag: String = self.content.chars().skip(node.range().start).take(node.range().end-node.range().start).collect();
-                        result.push(Question { qtype: qtype.to_string(), index: qn, whole_element: ContentRef {
+                        let mut name: Option<ContentRef> = None;
+                        for n in node.children() {
+                            if n.is_element() && n.tag_name().name() == "name" {
+                                let text = &self._get_elements(n, vec!["text".to_string()])[0];
+                                if let ContentType::Element(_,_,items) = text {
+                                    let econtent = &items[0];
+                                    if let ContentType::ElementContent(c) = econtent {
+                                        name = Some(c.clone());
+                                    }
+                                }
+                                break;
+                            }
+                        }
+
+                        let wholetag: String = self.content[node.range().start..node.range().end].to_string();
+                        result.push(Question { qtype: qtype.to_string(), index: qn, name: name.expect("Questions should have names"), whole_element: ContentRef {
                                 content: wholetag,
                                 start: node.range().start,
                                 end: node.range().end,
@@ -445,9 +489,9 @@ impl QParser {
             },
             1 => {
                 let c: Change = self.changes.pop().unwrap();
-                let mut new_content: String = self.content.chars().take(c.position.start).collect();
+                let mut new_content: String = self.content[..c.position.start].to_string();
                 new_content.push_str(&c.new_content);
-                let end: String = self.content.chars().skip(c.position.end).collect();
+                let end: String = self.content[c.position.end..].to_string();
                 new_content.push_str(&end);
                 self.content = new_content;
                 self.changes.clear();
@@ -456,9 +500,9 @@ impl QParser {
             _ => {
                 self.changes.sort_by(|a,b| b.position.start.cmp(&a.position.start));
                 for c in &self.changes {
-                    let mut new_content: String = self.content.chars().take(c.position.start).collect();
+                    let mut new_content: String = self.content[..c.position.start].to_string();
                     new_content.push_str(&c.new_content);
-                    let end: String = self.content.chars().skip(c.position.end).collect();
+                    let end: String = self.content[c.position.end..].to_string();
                     new_content.push_str(&end);
                     self.content = new_content;
                 }
@@ -557,12 +601,14 @@ impl QParser {
                 // First attributes if any.
                 for attr in node.attributes() {
                     // We need the position of the content inside quotes.
-                    let start = &self.content.chars().skip(attr.range().start).position(|c| c == '"' || c == '\'').unwrap() + attr.range().start + 1;
-                    let rawattr: String = self.content.chars().skip(start).take(attr.range().end-start-1).collect();
+                    let start = &self.content[attr.range().start..].find(|c| c == '"' || c == '\'').unwrap() + attr.range().start + 1;
+                    let quotetype: char = self.content[start-1..].chars().nth(0).unwrap();
+                    let end = &self.content[start..].find(|c| c == quotetype).unwrap() + start;
+                    let rawattr: String = self.content[start..end].to_string();
                     let cr: ContentRef = ContentRef {
                         content: rawattr,
                         start: start,
-                        end: attr.range().end - 1,
+                        end: end,
                         version_num: self.version_num
                     };
                     if attr.name().to_string() == "format" {
@@ -573,7 +619,7 @@ impl QParser {
                 }
 
                 // Then the content, if any...
-                let wholetag: String = self.content.chars().skip(node.range().start).take(node.range().end-node.range().start).collect();
+                let wholetag: String = self.content[node.range().start..node.range().end].to_string();
                 if &wholetag[node.range().end-node.range().start-2..] != "/>" && node.children().count() > 0 {
                     // So we can extract the internal bit, thus we have content.
                     let mut children = node.children();
@@ -597,7 +643,7 @@ impl QParser {
                         }
                     }
 
-                    let inner: String = self.content.chars().skip(first.range().start).take(last.range().end-first.range().start).collect();
+                    let inner: String = self.content[first.range().start..last.range().end].to_string();
                     let v = ContentType::ElementContent (ContentRef {
                         content: inner.to_string().clone(),
                         start: first.range().start,
@@ -607,8 +653,7 @@ impl QParser {
                     parts.push(v);
                 } else if &wholetag[node.range().end-node.range().start-2..] != "/>" {
                     // Not an "empty"-tag but still empty... We need to identify the position of that "><".
-                    let mut pos = wholetag.find("><").unwrap(); // Offset in bytes, need to map to chars.
-                    pos = node.range().start + &wholetag[..pos].chars().count() + 1;
+                    let pos = node.range().start + wholetag.find("><").unwrap() + 1;
                     let v = ContentType::ElementContent (ContentRef {
                         content: "".to_string(),
                         start: pos,

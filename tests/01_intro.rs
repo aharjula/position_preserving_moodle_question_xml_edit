@@ -8,9 +8,9 @@ fn count_questions_in_content() {
 	let data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
 <!-- question: 1  -->
-  <question type=\"some\">...</question>
+  <question type=\"some\"><name><text>test1</text></name></question>
 <!-- question: 2  -->
-  <question type=\"stack\">...</question>
+  <question type=\"stack\"><name><text>test2</text></name></question>
 </quiz>
 ".to_string();
 	// Parsers need to always be mutable, due to the way they track changes between searches.
@@ -20,10 +20,12 @@ fn count_questions_in_content() {
 	assert_eq!(questions.len(), 2);
 	assert_eq!(questions[0].qtype, "some");
 	assert_eq!(questions[0].index, 0);
-	assert_eq!(questions[0].whole_element.content, "<question type=\"some\">...</question>".to_string());
+	assert_eq!(questions[0].whole_element.content, "<question type=\"some\"><name><text>test1</text></name></question>".to_string());
+	assert_eq!(questions[0].name.content, "test1".to_string());
 	assert_eq!(questions[1].qtype, "stack");
 	assert_eq!(questions[1].index, 1);
-	assert_eq!(questions[1].whole_element.content, "<question type=\"stack\">...</question>".to_string());
+	assert_eq!(questions[1].whole_element.content, "<question type=\"stack\"><name><text>test2</text></name></question>".to_string());
+	assert_eq!(questions[1].name.content, "test2".to_string());
 }
 
 /// Once one has identified a question of the type one can query for 
@@ -34,10 +36,13 @@ fn extract_named_element_from_question() {
 <quiz>
 <!-- question: 1  -->
   <question type=\"some\">
-  	<name>Test question</name>
+  	<name><text>Test question</text></name>
+  	<something>Some</something>
   </question>
 <!-- question: 2  -->
-  <question type=\"stack\">...</question>
+  <question type=\"stack\">
+  	<name><text>Test question2</text></name>
+  </question>
 </quiz>
 ".to_string();
 	let mut parser = QParser::from_string(data).expect("Valid input should not fail");
@@ -47,19 +52,19 @@ fn extract_named_element_from_question() {
 		.expect("The above data has atleast one such question.");
 
 	// You might be searching for many different tags at the same time.
-	let elements: Vec<ContentType> = parser.get_elements(index, vec!["name".to_string()]);
+	let elements: Vec<ContentType> = parser.get_elements(index, vec!["something".to_string()]);
 
 	assert_eq!(index, 0);
 	assert_eq!(elements.len(), 1);
 
 	match &elements[0] {
 		ContentType::Element(tag_name, _whole_element_ref, contents_and_attributes) => {
-			assert_eq!(tag_name, &"name".to_string());
+			assert_eq!(tag_name, &"something".to_string());
 			assert_eq!(contents_and_attributes.len(), 1);
 			// The contents & attibutes list should contain AttributeValue and ElementContent items.
 			// Now just the latter as no attributes are in play.
 			if let ContentType::ElementContent(content_ref) = &contents_and_attributes[0] {
-				assert_eq!(content_ref.content, "Test question".to_string());
+				assert_eq!(content_ref.content, "Some".to_string());
 			} else {
 				panic!("Wrong type found!");
 			}
@@ -78,20 +83,26 @@ fn update_named_element_from_question() {
 <quiz>
 <!-- question: 1  -->
   <question type=\"some\">
-  	<name>Test question</name>
+  	<name><text>Test question</text></name>
+  	<something>Some</something>
   </question>
 <!-- question: 2  -->
-  <question type=\"stack\">...</question>
+  <question type=\"stack\">
+		<name><text>Test question2</text></name>
+  </question>
 </quiz>
 ".to_string();
 	let target_data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
 <!-- question: 1  -->
   <question type=\"some\">
-  	<name>Lorem ipsum question</name>
+  	<name><text>Test question</text></name>
+  	<something>Lorem ipsum question</something>
   </question>
 <!-- question: 2  -->
-  <question type=\"stack\">...</question>
+  <question type=\"stack\">
+		<name><text>Test question2</text></name>
+  </question>
 </quiz>
 ".to_string();
 	let mut parser = QParser::from_string(data).expect("Valid input should not fail");
@@ -101,14 +112,14 @@ fn update_named_element_from_question() {
 		.expect("The above data has atleast one such question.");
 
 	// You might be searching for many different tags at the same time.
-	let elements: Vec<ContentType> = parser.get_elements(index, vec!["name".to_string()]);
+	let elements: Vec<ContentType> = parser.get_elements(index, vec!["something".to_string()]);
 
 	assert_eq!(index, 0);
 	assert_eq!(elements.len(), 1);
 
 	match &elements[0] {
 		ContentType::Element(tag_name, _whole_element_ref, contents_and_attributes) => {
-			assert_eq!(tag_name, &"name".to_string());
+			assert_eq!(tag_name, &"something".to_string());
 			assert_eq!(contents_and_attributes.len(), 1);
 			// The contents & attibutes list should contain AttributeValue and ElementContent items.
 			// Now just the latter as no attributes are in play.
@@ -116,7 +127,7 @@ fn update_named_element_from_question() {
 				// content_ref here is a ContentRef which contains necessary 
 				// information to map to the original document as well as 
 				// the text content of a particular item.
-				assert_eq!(content_ref.content, "Test question".to_string());
+				assert_eq!(content_ref.content, "Some".to_string());
 
 				// Now generate a change to that elements content.
 				let change: Change = Change {
@@ -152,6 +163,7 @@ fn change_attribute_value_wrong_way() {
 	let data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
   <question type=\"some\">
+  	<name><text>Test question1</text></name>
   	<foo bar='&amp;abc'>test</foo>
   </question>
 </quiz>
@@ -159,6 +171,7 @@ fn change_attribute_value_wrong_way() {
 	let target_data_a = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
   <question type=\"some\">
+  	<name><text>Test question1</text></name>
   	<foo bar='&'>TEST</foo>
   </question>
 </quiz>
@@ -242,14 +255,16 @@ fn change_attribute_value_correct_way() {
 	let data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
   <question type=\"some\">
-  	<foo bar='&amp;abc'>test</foo>
+  	<name><text>Test question1</text></name>
+  	<foo bar='&amp;abc' baz='...'>test</foo>
   </question>
 </quiz>
 ".to_string();
 	let target_data_a = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
   <question type=\"some\">
-  	<foo bar='&amp;&apos;'>TEST&</foo>
+  	<name><text>Test question1</text></name>
+  	<foo bar='&amp;&apos;' baz='...'>TEST&</foo>
   </question>
 </quiz>
 ".to_string();
@@ -261,9 +276,9 @@ fn change_attribute_value_correct_way() {
 	match &elements[0] {
 		ContentType::Element(tag_name, _whole_element_ref, contents_and_attributes) => {
 			assert_eq!(tag_name, &"foo".to_string());
-			assert_eq!(contents_and_attributes.len(), 2);
+			assert_eq!(contents_and_attributes.len(), 3);
 			// The contents & attibutes list should contain AttributeValue and ElementContent items.
-			// Now we have exactyle one attribute and one value.
+			// Now we have exactyle two attributes and one value as the last one.
 			if let ContentType::AttributeValue(name, content_ref) = &contents_and_attributes[0] {
 				// content_ref here is a ContentRef which contains necessary 
 				// information to map to the original document as well as 
@@ -292,7 +307,7 @@ fn change_attribute_value_correct_way() {
 				panic!("Wrong type found!");
 			}
 
-			if let ContentType::ElementContent(content_ref) = &contents_and_attributes[1] {
+			if let ContentType::ElementContent(content_ref) = &contents_and_attributes[2] {
 				// content_ref here is a ContentRef which contains necessary 
 				// information to map to the original document as well as 
 				// the text content of a particular item.
@@ -338,6 +353,7 @@ fn moodle_formated_text_elements() {
 	let data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
   <question type=\"some\">
+  	<name><text>Test question</text></name>
   	<prtcorrect format=\"html\">
       <text><![CDATA[<span style=\"font-size: 1.5em; color:green;\"><i class=\"fa fa-check\"></i></span> Correct answer, well done.]]></text>
     </prtcorrect>
@@ -347,6 +363,7 @@ fn moodle_formated_text_elements() {
 	let target_data_a = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
   <question type=\"some\">
+  	<name><text>Test question</text></name>
   	<prtcorrect format=\"other\">
       <text><![CDATA[[[commonstring key='correct_answer_well_done'/]]]]></text>
     </prtcorrect>
@@ -408,6 +425,7 @@ fn whole_element_modification() {
 	let data = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
   <question type=\"some\">
+  	<name><text>Test question</text></name>
   	<trouble/>
   </question>
 </quiz>
@@ -415,6 +433,7 @@ fn whole_element_modification() {
 	let target_data_a = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
   <question type=\"some\">
+  	<name><text>Test question</text></name>
   	<notrouble></notrouble>
   </question>
 </quiz>
@@ -422,6 +441,7 @@ fn whole_element_modification() {
 	let target_data_b = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
 <quiz>
   <question type=\"some\">
+  	<name><text>Test question</text></name>
   	<notrouble>something</notrouble>
   </question>
 </quiz>
