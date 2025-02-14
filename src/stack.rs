@@ -128,6 +128,103 @@ pub struct STACKQuestion {
 	pub tests: Vec<STACKQtest>
 }
 
+/// Describes the part referenced when one asks for a listing of all
+/// of a given type.
+pub enum STACKPath {
+	/// Items of the question, e.g. "questionvariables"
+	Root(String),
+	/// Input-specific items by input, e.g. "ans1", "tans"
+	Input(String, String),
+	/// PRT-specific items by PRT, e.g. "prt1", "feedbackvariables"
+	PRT(String, String),
+	/// PRT-node speficic items, by PRT and node index, e.g, "prt1", 0, "answertest"
+	PRTNode(String, usize, String),
+	/// Question-test specific items by index, e.g. 0, "description"
+	Test(usize, String),
+	/// Question-test-input, specific items by index and input name, e.g. 0, "ans1", "value"
+	TestInput(usize, String, String),
+	/// Question-test-expectation, specific items by index and PRT-name, e.g. 0, "prt1", "expectedscore"
+	TestExpectation(usize, String, String)
+}
+
+impl STACKQuestion {
+	/// A function to fetch references to all content of a given type. In this case,
+	/// all the CASText fields with formatting on the editor side.
+	pub fn get_castext_fields(&self) -> Vec<(STACKPath, ContentType)> {
+		let mut result: Vec<(STACKPath, ContentType)> = Vec::new();
+
+		// Items of the root.
+		result.push((STACKPath::Root("questiontext".to_string()), self.questiontext.clone()));
+		result.push((STACKPath::Root("generalfeedback".to_string()), self.generalfeedback.clone()));
+		result.push((STACKPath::Root("specificfeedback".to_string()), self.specificfeedback.clone()));
+		result.push((STACKPath::Root("questionnote".to_string()), self.questionnote.clone()));
+		result.push((STACKPath::Root("questiondescription".to_string()), self.questiondescription.clone()));
+		result.push((STACKPath::Root("prtcorrect".to_string()), self.prtcorrect.clone()));
+		result.push((STACKPath::Root("prtpartiallycorrect".to_string()), self.prtpartiallycorrect.clone()));
+		result.push((STACKPath::Root("prtincorrect".to_string()), self.prtincorrect.clone()));
+
+		// Then the PRT-nodes.
+		for (prtname, prt) in self.prts.clone().into_iter() {
+			for i in 0..prt.nodes.len() {
+				result.push((STACKPath::PRTNode(prtname.clone(), i, "truefeedback".to_string()), prt.nodes[i].truefeedback.clone()));
+				result.push((STACKPath::PRTNode(prtname.clone(), i, "falsefeedback".to_string()), prt.nodes[i].falsefeedback.clone()));
+			}
+		}
+		return result;
+	}
+
+	/// A function to fetch references to all content of a given type. In this case,
+	/// all the fields that can contain longer multi-line CAS-logic.
+	pub fn get_keyval_fields(&self) -> Vec<(STACKPath, ContentRef)> {
+		let mut result: Vec<(STACKPath, ContentRef)> = Vec::new();
+
+		// Items of the root.
+		result.push((STACKPath::Root("questionvariables".to_string()), self.questionvariables.clone()));
+
+		// Then the PRTs.
+		for (prtname, prt) in self.prts.clone().into_iter() {
+			result.push((STACKPath::PRT(prtname.clone(), "feedbackvariables".to_string()), prt.feedbackvariables.clone()));
+		}
+		return result;
+	}
+
+	/// A function to fetch references to all content of a given type. In this case,
+	/// all the fields that can contain single statement CAS-logic.
+	pub fn get_castring_fields(&self) -> Vec<(STACKPath, ContentRef)> {
+		let mut result: Vec<(STACKPath, ContentRef)> = Vec::new();
+
+		// Inputs.
+		for (inputname, input) in self.inputs.clone().into_iter() {
+			result.push((STACKPath::Input(inputname.clone(), "tans".to_string()), input.tans.clone()));
+		}
+
+		// Then the PRTs.
+		for (prtname, prt) in self.prts.clone().into_iter() {
+			for i in 0..prt.nodes.len() {
+				result.push((STACKPath::PRTNode(prtname.clone(), i, "sans".to_string()), prt.nodes[i].sans.clone()));
+				result.push((STACKPath::PRTNode(prtname.clone(), i, "tans".to_string()), prt.nodes[i].tans.clone()));
+				result.push((STACKPath::PRTNode(prtname.clone(), i, "testoptions".to_string()), prt.nodes[i].testoptions.clone()));
+				result.push((STACKPath::PRTNode(prtname.clone(), i, "truescore".to_string()), prt.nodes[i].truescore.clone()));
+				result.push((STACKPath::PRTNode(prtname.clone(), i, "truepenalty".to_string()), prt.nodes[i].truepenalty.clone()));
+				result.push((STACKPath::PRTNode(prtname.clone(), i, "falsescore".to_string()), prt.nodes[i].falsescore.clone()));
+				result.push((STACKPath::PRTNode(prtname.clone(), i, "falsepenalty".to_string()), prt.nodes[i].falsepenalty.clone()));
+			}
+		}
+
+		// There is more in the tests.
+		for i in 0..self.tests.len() {
+			for (inputname, input) in self.tests[i].inputs.clone().into_iter() {
+				result.push((STACKPath::TestInput(i, inputname.clone(), "value".to_string()), input.value.clone()));
+			}	
+		}
+
+		return result;
+	}
+}
+
+
+
+
 impl QParser {
 	/// Type specific extraction of questions
 	pub fn get_as_stack_question(&mut self, qnum: usize) -> STACKQuestion {

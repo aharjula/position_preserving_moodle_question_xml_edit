@@ -13,7 +13,7 @@
 //! work around "helpful" features.
 
 // Some extra question type specific structs are in other files.
-mod stack;
+pub mod stack;
 
 /// References to values in content.
 #[derive(Debug, PartialEq, Clone)]
@@ -276,9 +276,9 @@ impl ContentType {
 
     /// Extracts the primary content of various types of things.
     ///  - AttributeValue -> the value of the attribute
-    ///  - Element -> the content unwrapped from ElementContent, if this is an <empty/>-tag then None.
+    ///  - Element -> the content unwrapped from ElementContent, if this is an `<empty/>`-tag then None.
     ///  - ElementContent -> the content
-    ///  - MoodleTextElement -> the content of the <text>-element.
+    ///  - MoodleTextElement -> the content of the `<text>`-element.
     pub fn get_content(self) -> Option<ContentRef> {
         match self {
             ContentType::AttributeValue(_, value) => {
