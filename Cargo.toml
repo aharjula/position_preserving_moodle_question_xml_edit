@@ -1,7 +1,7 @@
 [package]
 name = "position_preserving_moodle_question_xml_edit"
 description = "Diff-friendly Moodle question.xml editor library. For those situations where you only want to touch the contents of one element and leave the rest of the XML as it was."
-version = "0.1.1"
+version = "0.1.2"
 license = "MIT"
 edition = "2021"
 authors = ["Matti Harjula <matti.harjula@aalto.fi>"]

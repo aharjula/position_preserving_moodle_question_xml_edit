@@ -12,6 +12,9 @@
 //! is to try to avoid doing anythign withotu being asked so that no one needs to 
 //! work around "helpful" features.
 
+// Some extra question type specific structs are in other files.
+mod stack;
+
 /// References to values in content.
 #[derive(Debug, PartialEq, Clone)]
 pub struct ContentRef {
@@ -233,7 +236,7 @@ pub enum ContentType {
     ElementContent(ContentRef),
     /// Name of an element, a reference to the whole element, as well as a list of the attributes with the last element being the content of the element.
     Element(String, ContentRef, Vec<ContentType>),
-    /// The tagname, content refrence to the format and as the first item in the list the contents of the text-element and the rest of the items are attachments as elements.
+    /// The tagname, reference to the format and as the first item in the list the contents of the text-element and the rest of the items are attachments as elements.
     MoodleTextElement(String, ContentRef, Vec<ContentType>)
 }
 impl ContentType {
@@ -258,12 +261,45 @@ impl ContentType {
                 }
                 None
             },
+            ContentType::MoodleTextElement(_, format, _) => {
+                if name == "format".to_string() {
+                    Some(format)
+                } else {
+                    None
+                }
+            },
             _ => {
                 None
             }
         }
     }
 
+    /// Extracts the primary content of various types of things.
+    ///  - AttributeValue -> the value of the attribute
+    ///  - Element -> the content unwrapped from ElementContent, if this is an <empty/>-tag then None.
+    ///  - ElementContent -> the content
+    ///  - MoodleTextElement -> the content of the <text>-element.
+    pub fn get_content(self) -> Option<ContentRef> {
+        match self {
+            ContentType::AttributeValue(_, value) => {
+                return Some(value);
+            },
+            ContentType::Element(_, _, attributes_and_value) => {
+                if let ContentType::ElementContent(content) = attributes_and_value.last().unwrap() {
+                    return Some(content.clone());
+                }
+            },
+            ContentType::ElementContent(content) => {
+                return Some(content);
+            },
+            ContentType::MoodleTextElement(_, _, content_and_files) => {
+                if let ContentType::ElementContent(content) = content_and_files.first().unwrap() {
+                    return Some(content.clone());
+                }
+            }
+        }
+        None
+    }
 }
 
 
@@ -323,7 +359,7 @@ impl Change {
         }
     }
 
-    /// Jsut create a Change struct
+    /// Just create a Change struct
     pub fn new(position: ContentRef, value: String) -> Change {
         Change {
             position: position,
@@ -331,6 +367,7 @@ impl Change {
         }
     }
 }
+
 
 /// The parser object, holding the current in-memory version of the document and keeping track of changes that are to be made to it.
 pub struct QParser {

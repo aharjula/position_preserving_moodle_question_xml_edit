@@ -10,7 +10,14 @@ This will primarily target [STACK](https://stack-assessment.org/)-questions but 
 
 ## Current state of development
 
-This is the first release 0.1.0, hardly tested or used and written as pretty much the first rust thing of the author, so be careful and don't get too revulsed by what you see in the code.
+Early days for this lib, expect new features.
+
+Changelog:
+
+ - 0.1.2 helper accessors for common actions on ContentTypes. STACK specific structs for dealing with the sub-structure of the question-type.
+ - 0.1.1 bugs in example
+ - 0.1.0 the first release
+
 
 # Docs...
 
